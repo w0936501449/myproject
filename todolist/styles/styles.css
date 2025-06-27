@@ -1,0 +1,104 @@
+body {
+  background-color: #91c8e4;
+  min-height: 100vh;
+  font-family: "Montserrat", sans-serif;
+}
+
+.container {
+  background-color: white;
+  width: 400px;
+  margin: 100px auto;
+  padding: 10px 100px;
+  border-radius: 1rem;
+  box-shadow: 5px 5px 5px gray;
+}
+
+.inner-wrapper .todo-list-title {
+  position: relative;
+  left: -25px;
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.inner-wrapper .input-wrapper {
+  border-radius: 20px;
+  background-color: #eeeff0;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 424px;
+}
+
+.inner-wrapper .input-wrapper #input {
+  background-color: transparent;
+  border: 0;
+  flex: 1;
+  outline: none;
+  padding: 10px 20px;
+  font-size: 1rem;
+}
+
+.inner-wrapper .input-wrapper #add-button {
+  color: white;
+  background-color: #91c8e4;
+  border: 0;
+  font-family: "Montserrat", sans-serif;
+  font-size: 1rem;
+  border-radius: 20px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.inner-wrapper .list {
+  list-style: none;
+  padding: 0;
+}
+
+.inner-wrapper .list li {
+  position: relative;
+  font-size: 25px;
+  vertical-align: middle;
+  font-weight: 400;
+  padding: 5px;
+}
+
+.list li::before {
+  content: "";
+  display: inline-block;
+  width: 45px;
+  height: 45px;
+  background-image: url(/images/unchecked.svg);
+  background-size: contain;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  vertical-align: middle;
+  margin-right: 15px;
+}
+
+.list li.checked::before {
+  background-image: url(/images/checked.svg);
+}
+
+.list li.checked {
+  text-decoration: line-through;
+}
+
+.delete {
+  background-image: url(/images/del.svg);
+  background-size: cover;
+  border-radius: 25px;
+  padding: 5px;
+  background-position: center;
+  position: absolute;
+  background-repeat: no-repeat;
+  right: 0;
+  top: 0;
+  height: 35px;
+  width: 35px;
+  cursor: pointer;
+}
+
+#input:focus {
+  background-color: #f8f8f8;
+}/*# sourceMappingURL=styles.css.map */
