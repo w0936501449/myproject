@@ -36,7 +36,7 @@
         const [portfolio, setPortfolio] = useState([]);
         const [code, setCode] = useState('');
         const [shares, setShares] = useState(1000);
-        const [price, setPrice] = useState(100);
+        const [price, setPrice] = useState('');
 
         // Fetch portfolio on mount
         useEffect(() => {
@@ -47,14 +47,18 @@
 
         const addStock = async () => {
           if (!code) return alert('請輸入股票代碼');
+          const payload = { code, shares };
+          if (price !== '') payload.buyPrice = Number(price);
+
           const res = await fetch('/api/stocks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, shares, buyPrice: price })
+            body: JSON.stringify(payload)
           });
           const data = await res.json();
           setPortfolio(data.portfolio);
           setCode('');
+          setPrice('');
         };
 
         const removeStock = async (stockCode) => {
@@ -71,8 +75,13 @@
 
         // Computed metrics
         const totalInvest = portfolio.reduce((sum, s) => sum + s.shares * s.buyPrice, 0);
-        const totalMarket = totalInvest; // For demo, assume market price == buy price
+        const totalMarket = portfolio.reduce((sum, s) => {
+          const price = s.currentPrice ?? s.buyPrice;
+          return sum + s.shares * price;
+        }, 0);
         const profit = totalMarket - totalInvest;
+
+        const formatMoney = (num) => `$${Number(num).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
         return (
           <div className="container">
@@ -109,11 +118,11 @@
                   />
                 </label>
                 <label>
-                  買入價格 (元)
+                  買入價格 (元，可留空)
                   <input
                     type="number"
                     value={price}
-                    onChange={(e) => setPrice(Number(e.target.value))}
+                    onChange={(e) => setPrice(e.target.value)}
                   />
                 </label>
                 <button className="primary" onClick={addStock}>新增股票</button>
@@ -134,7 +143,10 @@
                       <th>股票代碼</th>
                       <th>持有股數</th>
                       <th>買入價格</th>
+                      <th>現價</th>
                       <th>投資成本</th>
+                      <th>市值</th>
+                      <th>損益</th>
                       <th>操作</th>
                     </tr>
                   </thead>
@@ -144,7 +156,12 @@
                         <td>{s.code}</td>
                         <td>{s.shares.toLocaleString()}</td>
                         <td>${s.buyPrice}</td>
+                        <td>{s.currentPrice ? formatMoney(s.currentPrice) : '載入中'}</td>
                         <td>${(s.shares * s.buyPrice).toLocaleString()}</td>
+                        <td>{s.currentPrice ? formatMoney(s.shares * s.currentPrice) : '-'}</td>
+                        <td className={s.currentPrice ? ((s.currentPrice - s.buyPrice) >= 0 ? 'profit' : 'loss') : ''}>
+                          {s.currentPrice ? formatMoney((s.currentPrice - s.buyPrice) * s.shares) : '-'}
+                        </td>
                         <td>
                           <button className="danger" onClick={() => removeStock(s.code)}>移除</button>
                         </td>
