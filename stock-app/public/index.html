@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>台灣股票查詢 APP</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- React & ReactDOM via CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Application code -->
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      function SummaryCard({ label, value }) {
+        return (
+          <div className="summary-card">
+            <h2>{value}</h2>
+            <p>{label}</p>
+          </div>
+        );
+      }
+
+      function App() {
+        const [portfolio, setPortfolio] = useState([]);
+        const [code, setCode] = useState('');
+        const [shares, setShares] = useState(1000);
+        const [price, setPrice] = useState(100);
+
+        // Fetch portfolio on mount
+        useEffect(() => {
+          fetch('/api/stocks')
+            .then((res) => res.json())
+            .then(setPortfolio);
+        }, []);
+
+        const addStock = async () => {
+          if (!code) return alert('請輸入股票代碼');
+          const res = await fetch('/api/stocks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, shares, buyPrice: price })
+          });
+          const data = await res.json();
+          setPortfolio(data.portfolio);
+          setCode('');
+        };
+
+        const removeStock = async (stockCode) => {
+          const res = await fetch(`/api/stocks/${stockCode}`, { method: 'DELETE' });
+          const data = await res.json();
+          setPortfolio(data.portfolio);
+        };
+
+        const resetPortfolio = async () => {
+          if (!window.confirm('確定要清空投資組合？')) return;
+          await fetch('/api/reset', { method: 'POST' });
+          setPortfolio([]);
+        };
+
+        // Computed metrics
+        const totalInvest = portfolio.reduce((sum, s) => sum + s.shares * s.buyPrice, 0);
+        const totalMarket = totalInvest; // For demo, assume market price == buy price
+        const profit = totalMarket - totalInvest;
+
+        return (
+          <div className="container">
+            <header>
+              <span className="material-icons logo">assessment</span>
+              <h1>台灣股票查詢APP</h1>
+              <p className="subtitle">React + Express 版本</p>
+            </header>
+
+            <section className="summary">
+              <SummaryCard label="持有股票數" value={portfolio.length} />
+              <SummaryCard label="總投資金額" value={`$${totalInvest.toLocaleString()}`} />
+              <SummaryCard label="總市值" value={`$${totalMarket.toLocaleString()}`} />
+              <SummaryCard label="總損益" value={`$${profit.toLocaleString()}`} />
+            </section>
+
+            <main className="main-content">
+              <aside className="sidebar">
+                <h2>新增股票</h2>
+                <label>
+                  股票代碼
+                  <input
+                    placeholder="例如: 2330 (台積電)"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                  />
+                </label>
+                <label>
+                  股數
+                  <input
+                    type="number"
+                    value={shares}
+                    onChange={(e) => setShares(Number(e.target.value))}
+                  />
+                </label>
+                <label>
+                  買入價格 (元)
+                  <input
+                    type="number"
+                    value={price}
+                    onChange={(e) => setPrice(Number(e.target.value))}
+                  />
+                </label>
+                <button className="primary" onClick={addStock}>新增股票</button>
+
+                <div className="quick-actions">
+                  <button className="danger" onClick={resetPortfolio}>
+                    <span className="material-icons">delete_forever</span>
+                    清空投資組合
+                  </button>
+                </div>
+              </aside>
+
+              <section className="portfolio">
+                <h2>投資組合</h2>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>股票代碼</th>
+                      <th>持有股數</th>
+                      <th>買入價格</th>
+                      <th>投資成本</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {portfolio.map((s) => (
+                      <tr key={s.code}>
+                        <td>{s.code}</td>
+                        <td>{s.shares.toLocaleString()}</td>
+                        <td>${s.buyPrice}</td>
+                        <td>${(s.shares * s.buyPrice).toLocaleString()}</td>
+                        <td>
+                          <button className="danger" onClick={() => removeStock(s.code)}>移除</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            </main>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "stock-app",
+  "version": "1.0.0",
+  "description": "Simple Taiwan stock portfolio tracker using React (CDN) + Express",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
