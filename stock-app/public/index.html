@@ -141,6 +141,7 @@
                   <thead>
                     <tr>
                       <th>股票代碼</th>
+                      <th>名稱</th>
                       <th>持有股數</th>
                       <th>買入價格</th>
                       <th>現價</th>
@@ -154,6 +155,7 @@
                     {portfolio.map((s) => (
                       <tr key={s.code}>
                         <td>{s.code}</td>
+                        <td>{s.name || '-'}</td>
                         <td>{s.shares.toLocaleString()}</td>
                         <td>${s.buyPrice}</td>
                         <td>{s.currentPrice ? formatMoney(s.currentPrice) : '載入中'}</td>

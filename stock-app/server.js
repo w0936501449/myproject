@@ -22,11 +22,17 @@ async function refreshPrices() {
     quotesArr.forEach((q) => {
       // Remove .TW suffix when mapping back
       const code = q.symbol.replace('.TW', '');
-      priceMap[code] = q.regularMarketPrice ?? null;
+      priceMap[code] = {
+        price: q.regularMarketPrice ?? null,
+        name: q.shortName || q.longName || null
+      };
     });
     // Update each stock with currentPrice
     portfolio.forEach((stock) => {
-      stock.currentPrice = priceMap[stock.code] ?? null;
+      stock.currentPrice = priceMap[stock.code]?.price ?? priceMap[stock.code] ?? null;
+      if (!stock.name && priceMap[stock.code]?.name) {
+        stock.name = priceMap[stock.code].name;
+      }
     });
   } catch (err) {
     console.error('Error fetching Yahoo Finance quotes', err);
@@ -48,11 +54,13 @@ app.post('/api/stocks', async (req, res) => {
   }
 
   let finalBuyPrice = buyPrice;
+  let fetchedName = null;
   if (finalBuyPrice === undefined || finalBuyPrice === null) {
     try {
       const symbol = code.includes('.') ? code : `${code}.TW`;
       const quote = await yahooFinance.quote(symbol);
       finalBuyPrice = quote.regularMarketPrice;
+      fetchedName = quote.shortName || quote.longName || null;
     } catch (err) {
       console.error('Failed to fetch price for', code, err);
       return res.status(400).json({ error: '無法取得股票現價，請手動輸入買入價格' });
@@ -64,8 +72,11 @@ app.post('/api/stocks', async (req, res) => {
   if (existing) {
     existing.shares += Number(shares);
     existing.buyPrice = Number(finalBuyPrice); // Update to last buy price
+    if (!existing.name && fetchedName) {
+      existing.name = fetchedName;
+    }
   } else {
-    portfolio.push({ code, shares: Number(shares), buyPrice: Number(finalBuyPrice) });
+    portfolio.push({ code, shares: Number(shares), buyPrice: Number(finalBuyPrice), name: fetchedName });
   }
 
   // Update current prices before responding
