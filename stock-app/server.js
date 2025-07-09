@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const app = express();
-const yahooFinance = require('yahoo-finance2').default;
+const axios = require('axios');
 
 // Middleware
 app.use(express.json());
@@ -9,37 +9,49 @@ app.use(express.json());
 // In-memory data store (replace with db for production)
 let portfolio = [];
 
-// Yahoo Finance query options for Chinese (Taiwan)
-const YF_OPTS = { lang: 'zh-TW', region: 'TW' };
+// Helper: Fetch latest close price & name from TWSE open API (monthly dataset)
+async function fetchTwseQuote(code) {
+  try {
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}01`;
+    const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${dateStr}&stockNo=${code}`;
+    const resp = await axios.get(url);
+    const body = resp.data;
+    if (body.stat !== 'OK') throw new Error(body.stat || 'TWSE API error');
+    const rows = body.data;
+    if (!rows || rows.length === 0) throw new Error('No data');
+    const lastRow = rows[rows.length - 1];
+    const closePriceStr = lastRow[6];
+    const price = parseFloat(closePriceStr.replace(/,/g, ''));
+    // Extract name from title: e.g., "113年07月 2330 台積電 各日成交資訊"
+    let name = null;
+    if (body.title) {
+      const match = body.title.match(/\d+ \d+ (\\d{4})?\s*([0-9A-Za-z]+)\s*(.+?)\s/);
+    }
+    // simpler: after code there is name within the title; split by code
+    if (body.title) {
+      const parts = body.title.split(code);
+      if (parts.length > 1) {
+        name = parts[1].trim().split(' ')[0];
+      }
+    }
+    return { price, name };
+  } catch (err) {
+    console.error('fetchTwseQuote error', code, err.message);
+    return { price: null, name: null };
+  }
+}
 
 // Helper to update current prices for stocks in portfolio
 async function refreshPrices() {
   if (portfolio.length === 0) return;
-  // Prepare symbols e.g., 2330 => 2330.TW
-  const symbols = portfolio.map((s) => (s.code.includes('.') ? s.code : `${s.code}.TW`));
-  try {
-    const quotes = await yahooFinance.quote(symbols, YF_OPTS);
-    // yahooFinance.quote returns an object for single symbol or array for multi
-    const quotesArr = Array.isArray(quotes) ? quotes : [quotes];
-    const priceMap = {};
-    quotesArr.forEach((q) => {
-      // Remove .TW suffix when mapping back
-      const code = q.symbol.replace('.TW', '');
-      priceMap[code] = {
-        price: q.regularMarketPrice ?? null,
-        name: q.shortName || q.longName || null
-      };
-    });
-    // Update each stock with currentPrice
-    portfolio.forEach((stock) => {
-      stock.currentPrice = priceMap[stock.code]?.price ?? priceMap[stock.code] ?? null;
-      if (!stock.name && priceMap[stock.code]?.name) {
-        stock.name = priceMap[stock.code].name;
-      }
-    });
-  } catch (err) {
-    console.error('Error fetching Yahoo Finance quotes', err);
-  }
+  const promises = portfolio.map((s) => fetchTwseQuote(s.code));
+  const results = await Promise.all(promises);
+  results.forEach((res, idx) => {
+    const stock = portfolio[idx];
+    stock.currentPrice = res.price;
+    if (!stock.name && res.name) stock.name = res.name;
+  });
 }
 
 // Manual refresh endpoint
@@ -66,9 +78,9 @@ app.post('/api/stocks', async (req, res) => {
   if (finalBuyPrice === undefined || finalBuyPrice === null) {
     try {
       const symbol = code.includes('.') ? code : `${code}.TW`;
-      const quote = await yahooFinance.quote(symbol, YF_OPTS);
-      finalBuyPrice = quote.regularMarketPrice;
-      fetchedName = quote.shortName || quote.longName || null;
+      const { price, name } = await fetchTwseQuote(code);
+      finalBuyPrice = price;
+      fetchedName = name;
     } catch (err) {
       console.error('Failed to fetch price for', code, err);
       return res.status(400).json({ error: '無法取得股票現價，請手動輸入買入價格' });
