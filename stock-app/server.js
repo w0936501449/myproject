@@ -9,13 +9,16 @@ app.use(express.json());
 // In-memory data store (replace with db for production)
 let portfolio = [];
 
+// Yahoo Finance query options for Chinese (Taiwan)
+const YF_OPTS = { lang: 'zh-TW', region: 'TW' };
+
 // Helper to update current prices for stocks in portfolio
 async function refreshPrices() {
   if (portfolio.length === 0) return;
   // Prepare symbols e.g., 2330 => 2330.TW
   const symbols = portfolio.map((s) => (s.code.includes('.') ? s.code : `${s.code}.TW`));
   try {
-    const quotes = await yahooFinance.quote(symbols);
+    const quotes = await yahooFinance.quote(symbols, YF_OPTS);
     // yahooFinance.quote returns an object for single symbol or array for multi
     const quotesArr = Array.isArray(quotes) ? quotes : [quotes];
     const priceMap = {};
@@ -39,6 +42,11 @@ async function refreshPrices() {
   }
 }
 
+// Manual refresh endpoint
+app.post('/api/refresh', async (req, res) => {
+  await refreshPrices();
+  res.json({ success: true, portfolio });
+});
 // Routes ------------------------------------------------------
 // Get all stocks in portfolio
 app.get('/api/stocks', async (req, res) => {
@@ -58,7 +66,7 @@ app.post('/api/stocks', async (req, res) => {
   if (finalBuyPrice === undefined || finalBuyPrice === null) {
     try {
       const symbol = code.includes('.') ? code : `${code}.TW`;
-      const quote = await yahooFinance.quote(symbol);
+      const quote = await yahooFinance.quote(symbol, YF_OPTS);
       finalBuyPrice = quote.regularMarketPrice;
       fetchedName = quote.shortName || quote.longName || null;
     } catch (err) {

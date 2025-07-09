@@ -130,6 +130,16 @@ button.danger {
   gap: 4px;
 }
 
+button.secondary {
+  background: #ffb300; /* amber */
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
 .quick-actions {
   margin-top: 30px;
 }

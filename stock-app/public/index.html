@@ -67,6 +67,12 @@
           setPortfolio(data.portfolio);
         };
 
+        const refreshAllPrices = async () => {
+          const res = await fetch('/api/refresh', { method: 'POST' });
+          const data = await res.json();
+          setPortfolio(data.portfolio);
+        };
+
         const resetPortfolio = async () => {
           if (!window.confirm('確定要清空投資組合？')) return;
           await fetch('/api/reset', { method: 'POST' });
@@ -128,6 +134,10 @@
                 <button className="primary" onClick={addStock}>新增股票</button>
 
                 <div className="quick-actions">
+                  <button className="secondary" onClick={refreshAllPrices}>
+                    <span className="material-icons">refresh</span>
+                    更新現價
+                  </button>
                   <button className="danger" onClick={resetPortfolio}>
                     <span className="material-icons">delete_forever</span>
                     清空投資組合
