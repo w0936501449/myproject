@@ -15,6 +15,78 @@ const btnRefresh = document.getElementById('btn-refresh');
 const btnReset = document.getElementById('btn-reset');
 const tableBody = document.getElementById('table-body');
 
+// Modal elements
+const modal = document.getElementById('modal');
+const modalBody = document.getElementById('modal-body');
+const modalClose = document.getElementById('modal-close');
+
+modalClose.addEventListener('click', () => hideModal());
+modal.addEventListener('click', (e) => {
+  if (e.target === modal) hideModal();
+});
+
+function showModal() {
+  modal.classList.remove('hidden');
+  modal.classList.add('show');
+}
+
+function hideModal() {
+  modal.classList.add('hidden');
+  modal.classList.remove('show');
+}
+
+// Fetch EPS data
+async function fetchEPS(code) {
+  const suffixes = ['ci', 'mim', 'basi', 'fh', 'ins'];
+  for (const suf of suffixes) {
+    try {
+      const url = `https://openapi.twse.com.tw/v1/opendata/t187ap06_L_${suf}`;
+      const resp = await fetch(url, { cache: 'no-store' });
+      const arr = await resp.json();
+      const rows = arr.filter((r) => r['公司代號'] === code);
+      if (rows.length) return rows;
+    } catch (err) {
+      console.error('fetchEPS error', suf, err);
+    }
+  }
+  return [];
+}
+
+function renderEPSModal(code, name, epsRows) {
+  // Sort by year desc then season desc
+  epsRows.sort((a, b) => {
+    if (a['年度'] !== b['年度']) return b['年度'] - a['年度'];
+    return b['季別'] - a['季別'];
+  });
+
+  // Build quarterly table
+  let html = `<h3>${code} ${name || ''} ─ EPS 資訊</h3>`;
+  html += '<h4>各季 EPS</h4><table class="eps-table"><thead><tr><th>年度</th><th>季別</th><th>EPS</th></tr></thead><tbody>';
+  epsRows.slice(0, 12).forEach((row) => {
+    html += `<tr><td>${row['年度']}</td><td>${row['季別']}</td><td>${row['基本每股盈餘（元）']}</td></tr>`;
+  });
+  html += '</tbody></table>';
+
+  // Annual EPS sum
+  const annual = {};
+  epsRows.forEach((r) => {
+    const year = r['年度'];
+    const val = parseFloat(r['基本每股盈餘（元）']);
+    if (!isNaN(val)) {
+      annual[year] = (annual[year] || 0) + val;
+    }
+  });
+  const years = Object.keys(annual).sort((a, b) => b - a);
+  html += '<h4>年度合計 EPS</h4><table class="eps-table"><thead><tr><th>年度</th><th>EPS</th></tr></thead><tbody>';
+  years.slice(0, 5).forEach((y) => {
+    html += `<tr><td>${y}</td><td>${annual[y].toFixed(2)}</td></tr>`;
+  });
+  html += '</tbody></table>';
+
+  modalBody.innerHTML = html;
+  showModal();
+}
+
 const LS_KEY = 'tw_stock_portfolio';
 let portfolio = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
 
@@ -66,7 +138,7 @@ function calcAndRender() {
   portfolio.forEach((p) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${p.code}</td>
+      <td class="code-cell" data-code="${p.code}">${p.code}</td>
       <td>${p.name || '-'}</td>
       <td>${p.shares.toLocaleString()}</td>
       <td>${fmt(p.buyPrice)}</td>
@@ -130,6 +202,19 @@ tableBody.addEventListener('click', (e) => {
     portfolio = portfolio.filter((p) => p.code !== code);
     save();
     calcAndRender();
+  } else if (e.target.closest('.code-cell')) {
+    const cell = e.target.closest('.code-cell');
+    const code = cell.getAttribute('data-code');
+    const stock = portfolio.find((p) => p.code === code);
+    modalBody.innerHTML = '載入中...';
+    showModal();
+    fetchEPS(code).then((rows) => {
+      if (rows.length) {
+        renderEPSModal(code, stock?.name, rows);
+      } else {
+        modalBody.innerHTML = '查無 EPS 資料';
+      }
+    });
   }
 });
 

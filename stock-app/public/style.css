@@ -188,6 +188,72 @@ td.loss {
   font-weight: 700;
 }
 
+/* Modal */
+.modal.hidden {
+  display: none;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80%;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-content h3 {
+  margin-bottom: 10px;
+}
+
+.modal-content .close {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.eps-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.eps-table th, .eps-table td {
+  border: 1px solid #ddd;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.eps-table th {
+  background: #f0f0f0;
+}
+
+.code-cell {
+  color: #007cf0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 @media (max-width: 768px) {
   .main-content {
     flex-direction: column;
